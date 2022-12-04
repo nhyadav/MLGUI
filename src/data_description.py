@@ -16,7 +16,7 @@ class DataPreprocessing:
             self.data_['features_name']=self.data.columns
         else:
             self.data = pd.read_excel(self.path)
-            self.data_['data']=self.data.values
+            self.data_['data']=self.data.fillna('').values
             self.data_['features_name']=self.data.columns
     
     
