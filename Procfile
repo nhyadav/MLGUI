@@ -1,1 +1,0 @@
-web: gunicorn ram.wsgi --log-file -
