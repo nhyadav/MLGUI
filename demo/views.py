@@ -13,6 +13,9 @@ from src.data_description import DataPreprocessing
 import pickle
 from pathlib import Path,os
 import numpy as np
+import pandas as pd
+from sklearn.preprocessing import MinMaxScaler,StandardScaler
+from sklearn.decomposition import PCA
 # Create your views here.
 
 logger = logging.getLogger(__name__)
@@ -104,3 +107,86 @@ def get_heatmap_data(request):
     except Exception as e:
         logger.error('Error during fetching plot data:',e)
         return Response([{'error':e}])
+
+@csrf_exempt
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_feature_engineering(request):
+    with open(rawdatapath, 'rb') as out:
+        data = pickle.load(out)
+    return Response({'data':data.fillna('').values,'features':data.columns})
+
+    
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def get_feature_sacaling(request):
+    content = json.loads(request.body)
+    operation = content['operation']['scaleAttribte']
+    print(operation)
+    with open(rawdatapath, 'rb') as out:
+        data = pickle.load(out)
+    if operation == "--Select--":
+        return Response({'data':data.fillna('').values,'features':data.columns})
+
+    elif operation == "min-max":
+        mns = MinMaxScaler()
+        try:
+            sc_data = mns.fit_transform(data.select_dtypes(include=[np.int64, np.float64]))
+            sc_data = pd.DataFrame(sc_data, columns=data.select_dtypes(include=[np.int64, np.float64]).columns)
+            for col in data.select_dtypes(include=[np.int64, np.float64]).columns:
+                data[col] = sc_data[col]
+            print("done....")
+            with open(rawdatapath,'wb') as out:
+                pickle.dump(data, out)
+            return Response({'data':data.fillna('').values,'features':data.columns})
+        except Exception as e:
+            return Response({'data':data.fillna('').values,'features':data.columns})
+    return Response({'data': None})
+
+
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def get_feature_reduction(request):
+    content = json.loads(request.body)
+    print("Content of Feature reduction: ", content)
+    with open(rawdatapath, 'rb') as out:
+        data = pickle.load(out)
+    components = 2
+    pca = PCA(
+        n_components=components
+    )
+    pca.fit(data.select_dtypes(include=[np.int64, np.float64]))
+    x_pca = pca.transform(data.select_dtypes(include=[np.int64, np.float64]))
+    return Response({'status': "Success", "code":200, 'data':x_pca})
+
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def get_feature_transformation(request):
+    try:
+        content = json.loads(request.body)
+        operation = content['operation']['transAttribute']
+        print("Feature Transformation....", content)
+        with open(rawdatapath,'rb') as out:
+            data = pickle.load(out)
+        if operation == 'std':
+            std = StandardScaler()
+            sc_data = std.fit_transform(data.select_dtypes(exclude=['object','O']))
+            sc_data = pd.DataFrame(sc_data, columns=data.select_dtypes(exclude=['object','O']).columns)
+            for col in data.select_dtypes(exclude=['object','O']).columns:
+                data[col] = sc_data[col]
+            with open(rawdatapath, 'wb') as out:
+                pickle.dump(data, out)
+            return Response({'data':data.fillna('').values,'features':data.columns})
+        elif operation == 'box-cox':
+            pass
+        else:
+            return Response({'Status':'Not a Valid Operation','Code':200,'data':None})
+    except Exception as e:
+        print("hesfnkds", e)
+        return Response({'Status':'Error',"Code":200, 'Error': e})
