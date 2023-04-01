@@ -7,7 +7,7 @@ FeatureEngineering:
   FeatureSelection: false
   FeatureTransformation: false
 ModelEvalution:
-  Classification: true
+  Classification: false
   Cluster: false
   Regression: false
   TSA: false
