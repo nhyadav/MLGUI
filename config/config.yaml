@@ -1,13 +1,13 @@
 +-/DataDescription: null
 DataPreprocessing:
   Imputation: false
-  Transformation: true
+  Transformation: false
 FeatureEngineering:
   FeatureScaling: false
   FeatureSelection: false
   FeatureTransformation: false
 ModelEvalution:
-  Classification: false
+  Classification: true
   Cluster: false
   Regression: false
   TSA: false
