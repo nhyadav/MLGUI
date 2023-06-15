@@ -40,7 +40,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from xgboost import XGBClassifier
 # Create your views here.
 
-logger = logging.getLogger(__name__)
+
 base_dir  = Path(__file__).resolve().parent.parent
 rawdatapath = os.path.join(base_dir,'config/rawdata.pkl')
 dpdatapath = os.path.join(base_dir,'config/dpdata.pkl')
@@ -109,7 +109,6 @@ def getDescriptionData(request):
             response = [dp.data_,dp.datasummary_,dp.stats_description]
         except Exception as e:
             print("Anything is wrong",e)
-            logger.error(e)
             response = [{'error':e}]
         return Response(response, status=200)
     else:
