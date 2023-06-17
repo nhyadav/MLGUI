@@ -89,12 +89,8 @@ def getDescriptionData(request):
         try:
             file_data = request.FILES.get('file')
             Dataset(user=user, file=file_data).save()
-            try:
-                if os.environ['production_path']:
-                    print("214")
-                    path = '~/MLGUI/media/datasets/'+str(file_data.name)
-            except Exception as e:
-                path = 'media/datasets/'+str(file_data.name)
+            path = os.path.join(base_dir,'media/datasets',str(file_data.name))
+            print("path")
             dp = DataPreprocessing(path)
             dp.load_data()
             dp.getsummary()
