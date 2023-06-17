@@ -91,6 +91,7 @@ def getDescriptionData(request):
             Dataset(user=user, file=file_data).save()
             try:
                 if os.environ['production_path']:
+                    print("214")
                     path = '~/MLGUI/media/datasets/'+str(file_data.name)
             except Exception as e:
                 path = 'media/datasets/'+str(file_data.name)
@@ -98,6 +99,7 @@ def getDescriptionData(request):
             dp.load_data()
             dp.getsummary()
             dp.get_stats_description()
+            print("jay")
             with open(rawdatapath, "wb") as fout:
                 pickle.dump(dp.data, fout)
             params['DataPreprocessing']['Imputation'] = False
@@ -109,11 +111,12 @@ def getDescriptionData(request):
             params['ModelEvalution']['Regression'] = False
             params['ModelEvalution']['Cluster'] = False
             params['ModelEvalution']['TSA'] = False
+            print("Ram")
             save_config(params)
             response = [dp.data_,dp.datasummary_,dp.stats_description]
         except Exception as e:
             print("Anything is wrong",e)
-            response = [{'error':e}]
+            response = [{'error':str(e)}]
         return Response(response, status=200)
     else:
         file_data = request.FILES.get('file')
