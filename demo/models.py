@@ -10,3 +10,7 @@ class Dataset(models.Model):
     # def __str__(self) -> str:
     #     # return self.user.first
 
+class Feedback(models.Model):
+    name = models.CharField(max_length=50, blank=True,null=True)
+    email = models.EmailField(max_length=60,blank=True,null=True)
+    message = models.TextField(blank=True,null=True)

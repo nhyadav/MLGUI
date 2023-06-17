@@ -38,6 +38,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from xgboost import XGBClassifier
+from .models import Feedback
 # Create your views here.
 
 
@@ -64,7 +65,12 @@ def save_config(p):
     #     params = yaml.safe_load(out)
 
 
-
+@csrf_exempt
+@api_view(['POST'])
+def GetFeedback(request):
+    data = json.loads(request.body)
+    Feedback.objects.create(name=data['name'],email=data['email'],message=data['message'])
+    return Response({"Status":"Done"})
 
 
 
