@@ -1,6 +1,6 @@
 from django.shortcuts import render
 # from django.http import JsonResponse
-import logging
+# import logging
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -88,20 +88,27 @@ def GetFeedback(request):
 @permission_classes([IsAuthenticated])
 def getDescriptionData(request):
     user = request.user
+    # print("user",user)
     user_data = Dataset.objects.filter(user=user).first()
     with open(configpath, encoding='utf-8') as out:
         params = yaml.safe_load(out)
     if user_data:
         try:
             file_data = request.FILES.get('file')
-            Dataset(user=user, file=file_data).save()
-            path = os.path.join(base_dir,'media/datasets',str(file_data.name))
-            print("path")
+            user_data = Dataset.objects.get(user=user)
+            if user_data:
+                user_data.file=file_data
+                path = os.path.join(base_dir,'media/datasets',str(user_data.file))
+                user_data.save()
+            else:
+                path = os.path.join(base_dir,'media/datasets',str(file_data.name))
+
+            # print("path")
             dp = DataPreprocessing(path)
             dp.load_data()
             dp.getsummary()
             dp.get_stats_description()
-            print("jay")
+            # print("jay")
             with open(rawdatapath, "wb") as fout:
                 pickle.dump(dp.data, fout)
             params['DataPreprocessing']['Imputation'] = False
@@ -113,7 +120,7 @@ def getDescriptionData(request):
             params['ModelEvalution']['Regression'] = False
             params['ModelEvalution']['Cluster'] = False
             params['ModelEvalution']['TSA'] = False
-            print("Ram")
+            # print("Ram")
             save_config(params)
             response = [dp.data_,dp.datasummary_,dp.stats_description]
         except Exception as e:
@@ -122,8 +129,9 @@ def getDescriptionData(request):
         return Response(response, status=200)
     else:
         file_data = request.FILES.get('file')
-        usr_dt = Dataset.objects.create(user=user,file=file_data)
-        path = 'media/datasets/'+str(file_data.name)
+        usr_dt = Dataset.objects.create(user=user, file=file_data)
+        path = os.path.join(base_dir,'media/datasets',str(usr_dt.file))
+        # path = 'media/datasets/'+str(file_data.name)
         dp = DataPreprocessing(path)
         dp.load_data()
         dp.getsummary()
@@ -157,7 +165,7 @@ def getPlotData(request):
         # print(attributes)
         return Response({'data':data, 'attributes':attributes,'cat_attributes':cat_attribute})
     except Exception as e:
-        logger.error('Error during fetching plot data:',e)
+        # logger.error('Error during fetching plot data:',e)
         return Response([{'error':str(e)}])
 
 
@@ -173,7 +181,7 @@ def get_heatmap_data(request):
         null_data = data.isna().values
         return Response({'corr_features':corr_features,'corr_data':corr_data,'null_data':null_data})
     except Exception as e:
-        logger.error('Error during fetching plot data:',e)
+        # logger.error('Error during fetching plot data:',e)
         return Response([{'error':str(e)}])
 
 
@@ -186,7 +194,7 @@ def get_data_processing(request):
         params = yaml.safe_load(prms)
     try:
         oper = any([v for k,v in params['DataPreprocessing'].items()])
-        # print('oper',oper)
+        print('oper',oper)
         if not oper:
             with open(rawdatapath,'rb') as out:
                 data = pickle.load(out)
@@ -196,7 +204,7 @@ def get_data_processing(request):
         return Response({'data':data.fillna('').values,'features':data.columns,'null_data':data.isnull().sum().to_dict()
         })
     except Exception as e:
-        print(e)
+        # print(e)
         return Response({'Status':'Failed','Error':str(e)})
     
 @csrf_exempt
@@ -216,13 +224,13 @@ def get_imputation_preprocess(request):
                 data = pickle.load(out)
 
         if data.isnull().values.any():
-            print("imputation is called........")
+            # print("imputation is called........")
             content = json.loads(request.body)
             operation = content['imputAttribute']
-            print('operation',operation)
+            # print('operation',operation)
             if operation == 'drop':
                 cols_missing = [col for col in data.columns if data[col].isnull().any()]
-                print(cols_missing)
+                # print(cols_missing)
                 if cols_missing:
                     data = data.drop(cols_missing, axis=1)
                     with open(dpdatapath, 'wb') as out:
@@ -272,7 +280,7 @@ def get_transformation_preprocessing(request):
         features_transformation = params['DataPreprocessing']['Transformation']
         if not features_transformation:
             content = json.loads(request.body)
-            print('content', content)
+            # print('content', content)
             oper = any([v for k,v in params['DataPreprocessing'].items()])
             if not oper:
                 with open(rawdatapath,'rb') as out:
@@ -305,7 +313,7 @@ def get_transformation_preprocessing(request):
         else:
             return Response({'Status':'Already Done','Msg':"You Have Already Performed Transformar"})
     except Exception as e:
-        print(e)
+        # print(e)
         return Response({'Status':'Failed','Error':str(e)})
 
 
@@ -349,7 +357,7 @@ def get_feature_selection(request):
         if not features_selection:
             content = json.loads(request.body)
             columns = content['selectcols']['columns']
-            print("Feature selection:",columns)
+            # print("Feature selection:",columns)
             oper = any([v for k,v in params['DataPreprocessing'].items()])
             foper = any([v for k,v in params['FeatureEngineering'].items()])
             if not (oper or foper):
@@ -367,7 +375,7 @@ def get_feature_selection(request):
         else:
             return Response({'Status':'Already Done','Msg':'You Have Already Performed Features Selection.'})
     except Exception as e:
-        print('error',e)
+        # print('error',e)
         return Response({"Status":'Failed','Error':str(e)})
 
 
@@ -398,7 +406,7 @@ def get_feature_sacaling(request):
                 sc_data = pd.DataFrame(sc_data, columns=data.select_dtypes(include=[np.int64, np.float64]).columns)
                 for col in data.select_dtypes(include=[np.int64, np.float64]).columns:
                     data[col] = sc_data[col]
-                print("done....")
+                # print("done....")
                 with open(dpdatapath,'wb') as out:
                     pickle.dump(data, out)
                 # global scaling_done
@@ -408,7 +416,7 @@ def get_feature_sacaling(request):
         else:
             return Response({'Status':'Already Done','Msg':'You Have Already Performed Features Scaling.'})
     except Exception as e:
-        print('sss',e)
+        # print('sss',e)
         return Response({'data':data.fillna('').values,'features':data.columns, 'Status':'Failed','Error':str(e)})
 
 
@@ -421,7 +429,7 @@ def get_feature_reduction(request):
         params = yaml.safe_load(prms)
     try:
         content = json.loads(request.body)
-        print("Content of Feature reduction: ", content)
+        # print("Content of Feature reduction: ", content)
         oper = any([v for k,v in params['DataPreprocessing'].items()])
         foper = any([v for k,v in params['FeatureEngineering'].items()])
         # print('oper',oper)
@@ -439,7 +447,7 @@ def get_feature_reduction(request):
         x_pca = pca.transform(data.select_dtypes(include=[np.int64, np.float64]))
         return Response({'Status': "Success", "code":200, 'data':x_pca})
     except Exception as e:
-        print(e)
+        # print(e)
         return Response({'Status':'Failed','Error':str(e)})
 
 
@@ -454,10 +462,10 @@ def get_feature_transformation(request):
         try:
             content = json.loads(request.body)
             operation = content['operation']['transAttribute']
-            print("Feature Transformation....", content)
+            # print("Feature Transformation....", content)
             oper = any([v for k,v in params['DataPreprocessing'].items()])
             foper = any([v for k,v in params['FeatureEngineering'].items()])
-            # print('oper',oper)
+            print('oper',oper)
             if not (oper or foper):
                 with open(rawdatapath,'rb') as out:
                     data = pickle.load(out)
@@ -486,7 +494,7 @@ def get_feature_transformation(request):
             else:
                 return Response({'Status':'Not a Valid Operation','Code':200,'data':None})
         except Exception as e:
-            print("hesfnkds", e)
+            # print("hesfnkds", e)
             return Response({'Status':'Failed', 'Error': e})
     else:
         return Response({'Status':'Already Done','Msg':'You Have Already Performed Features Transformer.'})
@@ -528,13 +536,13 @@ def get_traintestsplit(request):
         with open(data_proc+'/y_test.pkl','wb') as out:
             pickle.dump(y_test, out)
         # print('content',content)
-        print('shape x_train', x_train.shape)        
-        print('shape y_train',y_train.shape)
-        print('shape x_test',x_test.shape)        
-        print('shape y_test',y_test.shape)
+        # print('shape x_train', x_train.shape)        
+        # print('shape y_train',y_train.shape)
+        # print('shape x_test',x_test.shape)        
+        # print('shape y_test',y_test.shape)
         return Response({'Status':'Done','Msg':'Successfully done Train Test Split....'})
     except Exception as e:
-        print(e)
+        # print(e)
         return Response({'Status':'Failed','Error':str(e)})
     
 
@@ -552,7 +560,7 @@ def build_linearregression(request):
         columns = ['Model Name','RMSE','MAE','MSE','R2','Adjested-R2']
         content = json.loads(request.body)
         savemodel = content['save']
-        print("content",content)
+        # print("content",content)
         if savemodel:
             lrm = LinearRegression()
             with open(data_proc+'/x_train.pkl','rb') as out:
@@ -571,14 +579,14 @@ def build_linearregression(request):
             r2 = r2_score(y_test,pred)
             adj_r2 = 0
             if regression_m:
-                print('ram')
+                # print('ram')
                 with open(regressio_eval,'rb') as out:
                     df_e = pickle.load(out)
                 f_df_e = pd.concat([df_e, pd.DataFrame([['Linear Regression',rmse,mse,mae,r2,adj_r2]], columns=columns)])
                 with open(regressio_eval,'wb') as out:
                     pickle.dump(f_df_e,out)
             else:
-                print('ramji')
+                # print('ramji')
                 f_df_e = pd.DataFrame([['Linear Regression',rmse,mse,mae,r2,adj_r2]], columns=columns)
                 with open(regressio_eval,'wb') as out:
                     pickle.dump(f_df_e,out)
@@ -638,14 +646,14 @@ def build_lassoregression(request):
         adj_r2 = 0
         if savemodel:
             if regression_m:
-                print('ram')
+                # print('ram')
                 with open(regressio_eval,'rb') as out:
                     df_e = pickle.load(out)
                 f_df_e = pd.concat([df_e, pd.DataFrame([['Lasso Regression',rmse,mse,mae,r2,adj_r2]], columns=columns)])
                 with open(regressio_eval,'wb') as out:
                     pickle.dump(f_df_e,out)
             else:
-                print('ramji')
+                # print('ramji')
                 f_df_e = pd.DataFrame([['Lasso Regression',rmse,mse,mae,r2,adj_r2]], columns=columns)
                 with open(regressio_eval,'wb') as out:
                     pickle.dump(f_df_e,out)
@@ -686,14 +694,14 @@ def build_ridgeregression(request):
         adj_r2 = 0
         if savemodel:
             if regression_m:
-                print('ram')
+                # print('ram')
                 with open(regressio_eval,'rb') as out:
                     df_e = pickle.load(out)
                 f_df_e = pd.concat([df_e, pd.DataFrame([['Ridge Regression',rmse,mse,mae,r2,adj_r2]], columns=columns)])
                 with open(regressio_eval,'wb') as out:
                     pickle.dump(f_df_e,out)
             else:
-                print('ramji')
+                # print('ramji')
                 f_df_e = pd.DataFrame([['Ridge Regression',rmse,mse,mae,r2,adj_r2]], columns=columns)
                 with open(regressio_eval,'wb') as out:
                     pickle.dump(f_df_e,out)
@@ -703,7 +711,7 @@ def build_ridgeregression(request):
         else:
             return Response({'Status':'Done','RMSE':rmse,'MSE':mse,'MAE':mae,'R2':r2,'AdjR2':adj_r2,"Msg":'Ridge Regression Model is Trained.'})
     except Exception as e:
-        print(e)
+        # print(e)
         return Response({'Status':'Failed','Msg':str(e)})
 
 @csrf_exempt
@@ -735,14 +743,14 @@ def build_dtregression(request):
         adj_r2 = 0
         if savemodel:
             if regression_m:
-                print('ram')
+                # print('ram')
                 with open(regressio_eval,'rb') as out:
                     df_e = pickle.load(out)
                 f_df_e = pd.concat([df_e, pd.DataFrame([['Decision Tree Regression',rmse,mse,mae,r2,adj_r2]], columns=columns)])
                 with open(regressio_eval,'wb') as out:
                     pickle.dump(f_df_e,out)
             else:
-                print('ramji')
+                # print('ramji')
                 f_df_e = pd.DataFrame([['Decision Tree Regression',rmse,mse,mae,r2,adj_r2]], columns=columns)
                 with open(regressio_eval,'wb') as out:
                     pickle.dump(f_df_e,out)
@@ -752,7 +760,7 @@ def build_dtregression(request):
         else:
             return Response({'Status':'Done','RMSE':rmse,'MSE':mse,'MAE':mae,'R2':r2,'AdjR2':adj_r2,"Msg":'Decision Tree Regression Model is Trained.'})
     except Exception as e:
-        print(e)
+        # print(e)
         return Response({'Status':'Failed','Msg':str(e)})
 
 
@@ -785,14 +793,14 @@ def build_randomregression(request):
         adj_r2 = 0
         if savemodel:
             if regression_m:
-                print('ram')
+                # print('ram')
                 with open(regressio_eval,'rb') as out:
                     df_e = pickle.load(out)
                 f_df_e = pd.concat([df_e, pd.DataFrame([['Random Forest Regression',rmse,mse,mae,r2,adj_r2]], columns=columns)])
                 with open(regressio_eval,'wb') as out:
                     pickle.dump(f_df_e,out)
             else:
-                print('ramji')
+                # print('ramji')
                 f_df_e = pd.DataFrame([['Random Forest Regression',rmse,mse,mae,r2,adj_r2]], columns=columns)
                 with open(regressio_eval,'wb') as out:
                     pickle.dump(f_df_e,out)
@@ -802,7 +810,7 @@ def build_randomregression(request):
         else:
             return Response({'Status':'Done','RMSE':rmse,'MSE':mse,'MAE':mae,'R2':r2,'AdjR2':adj_r2,"Msg":'Random Forest Regression Model is Trained.'})
     except Exception as e:
-        print(e)
+        # print(e)
         return Response({'Status':'Failed','Msg':str(e)})
 
 
@@ -837,14 +845,14 @@ def build_svrregression(request):
         adj_r2 = 0
         if savemodel:
             if regression_m:
-                print('ram')
+                # print('ram')
                 with open(regressio_eval,'rb') as out:
                     df_e = pickle.load(out)
                 f_df_e = pd.concat([df_e, pd.DataFrame([['SVM Regression',rmse,mse,mae,r2,adj_r2]], columns=columns)])
                 with open(regressio_eval,'wb') as out:
                     pickle.dump(f_df_e,out)
             else:
-                print('ramji')
+                # print('ramji')
                 f_df_e = pd.DataFrame([['SVM Regression',rmse,mse,mae,r2,adj_r2]], columns=columns)
                 with open(regressio_eval,'wb') as out:
                     pickle.dump(f_df_e,out)
@@ -854,7 +862,7 @@ def build_svrregression(request):
         else:
             return Response({'Status':'Done','RMSE':rmse,'MSE':mse,'MAE':mae,'R2':r2,'AdjR2':adj_r2,"Msg":'SVM Regression Model is Trained.'})
     except Exception as e:
-        print(e)
+        # print(e)
         return Response({'Status':'Failed','Msg':str(e)})
 
 
@@ -887,14 +895,14 @@ def build_knnregression(request):
         adj_r2 = 0
         if savemodel:
             if regression_m:
-                print('ram')
+                # print('ram')
                 with open(regressio_eval,'rb') as out:
                     df_e = pickle.load(out)
                 f_df_e = pd.concat([df_e, pd.DataFrame([['KNN Regression',rmse,mse,mae,r2,adj_r2]], columns=columns)])
                 with open(regressio_eval,'wb') as out:
                     pickle.dump(f_df_e,out)
             else:
-                print('ramji')
+                # print('ramji')
                 f_df_e = pd.DataFrame([['KNN Regression',rmse,mse,mae,r2,adj_r2]], columns=columns)
                 with open(regressio_eval,'wb') as out:
                     pickle.dump(f_df_e,out)
@@ -904,7 +912,7 @@ def build_knnregression(request):
         else:
             return Response({'Status':'Done','RMSE':rmse,'MSE':mse,'MAE':mae,'R2':r2,'AdjR2':adj_r2,"Msg":'KNN Regression Model is Trained.'})
     except Exception as e:
-        print(e)
+        # print(e)
         return Response({'Status':'Failed','Msg':str(e)})
 
 
@@ -918,7 +926,7 @@ def build_xgbregression(request):
     try:
         columns = ['Model Name','RMSE','MAE','MSE','R2','Adjested-R2']
         content = json.loads(request.body)
-        print('content',content)
+        # print('content',content)
         savemodel = content['save']
         lrm = XGBRegressor()
         with open(data_proc+'/x_train.pkl','rb') as out:
@@ -938,14 +946,14 @@ def build_xgbregression(request):
         adj_r2 = 0
         if savemodel:
             if regression_m:
-                print('ram')
+                # print('ram')
                 with open(regressio_eval,'rb') as out:
                     df_e = pickle.load(out)
                 f_df_e = pd.concat([df_e, pd.DataFrame([['XGB Regression',rmse,mse,mae,r2,adj_r2]], columns=columns)])
                 with open(regressio_eval,'wb') as out:
                     pickle.dump(f_df_e,out)
             else:
-                print('ramji')
+                # print('ramji')
                 f_df_e = pd.DataFrame([['XGB Regression',rmse,mse,mae,r2,adj_r2]], columns=columns)
                 with open(regressio_eval,'wb') as out:
                     pickle.dump(f_df_e,out)
@@ -955,7 +963,7 @@ def build_xgbregression(request):
         else:
             return Response({'Status':'Done','RMSE':rmse,'MSE':mse,'MAE':mae,'R2':r2,'AdjR2':adj_r2,"Msg":'XGB Regression Model is Trained.'})
     except Exception as e:
-        print(e)
+        # print(e)
         return Response({'Status':'Failed','Msg':str(e)})
 
 
@@ -970,7 +978,7 @@ def build_logisticregression(request):
         columns = ['Model Name','Accuracy','Precision','Recall','F1_Score']
         content = json.loads(request.body)
         savemodel = content['save']
-        print(content)
+        # print(content)
         lrm = LogisticRegression()
         with open(data_proc+'/x_train.pkl','rb') as out:
             x_train = pickle.load(out)        
@@ -1004,7 +1012,7 @@ def build_logisticregression(request):
         else:
             return Response({'Status':'Done','Accuracy':accuracy,'Precision':precision,'Recall':recall,'F1_Score':f1_score,"Msg":'logistic Regression Model is Trained.'})
     except Exception as e:
-        print('error',e)
+        # print('error',e)
         return Response({'Status':'Failed','Error':str(e)})
 
 
@@ -1053,7 +1061,7 @@ def build_dtclassifier(request):
         else:
             return Response({'Status':'Done','Accuracy':accuracy,'Precision':precision,'Recall':recall,'F1_Score':f1_score,"Msg":'Decision Tree Classifier Model is Trained.'})
     except Exception as e:
-        print('error',e)
+        # print('error',e)
         return Response({'Status':'Failed','Error':str(e)})
 
 
@@ -1103,7 +1111,7 @@ def build_randomclassifier(request):
         else:
             return Response({'Status':'Done','Accuracy':accuracy,'Precision':precision,'Recall':recall,'F1_Score':f1_score,"Msg":'Random Forest Classifier Model is Trained.'})
     except Exception as e:
-        print('error',e)
+        # print('error',e)
         return Response({'Status':'Failed','Error':str(e)})
 
 
@@ -1152,7 +1160,7 @@ def build_svcclassifier(request):
         else:
             return Response({'Status':'Done','Accuracy':accuracy,'Precision':precision,'Recall':recall,'F1_Score':f1_score,"Msg":'Support Vectoer Classifier Model is Trained.'})
     except Exception as e:
-        print('error',e)
+        # print('error',e)
         return Response({'Status':'Failed','Error':str(e)})
 
 
@@ -1185,14 +1193,14 @@ def build_knnclassifier(request):
         f1_score = f1_score(y_test,pred,average='micro')
         if savemodel:
             if classify_e:
-                print('Jay shree Ram')
+                # print('Jay shree Ram')
                 with open(class_eval,'rb') as out:
                     df_e = pickle.load(out)
                 f_df_e = pd.concat([df_e, pd.DataFrame([['KNearest Neigbour',accuracy,precision,recall,f1_score]], columns=columns)])
                 with open(class_eval,'wb') as out:
                     pickle.dump(f_df_e,out)
             else:
-                print('Jay shree Ram34')
+                # print('Jay shree Ram34')
                 f_df_e = pd.DataFrame([['KNearest Neigbour',accuracy,precision,recall,f1_score]], columns=columns)
                 with open(class_eval,'wb') as out:
                     pickle.dump(f_df_e,out)
@@ -1202,7 +1210,7 @@ def build_knnclassifier(request):
         else:
             return Response({'Status':'Done','Accuracy':accuracy,'Precision':precision,'Recall':recall,'F1_Score':f1_score,"Msg":'KNearest Neigbour Model is Trained.'})
     except Exception as e:
-        print('error',e)
+        # print('error',e)
         return Response({'Status':'Failed','Error':str(e)})
 
 
@@ -1250,7 +1258,7 @@ def build_xgbclassifier(request):
         else:
             return Response({'Status':'Done','Accuracy':accuracy,'Precision':precision,'Recall':recall,'F1_Score':f1_score,"Msg":'Xgboost Classifier Model is Trained.'})
     except Exception as e:
-        print('error',e)
+        # print('error',e)
         return Response({'Status':'Failed','Error':str(e)})
 
 
@@ -1281,7 +1289,7 @@ def get_evalution_metrics(request):
         else:
             return Response({'status':'Done','class_m':None,'regre_m':None})   
     except Exception as e:
-        print(e)
+        # print(e)
         return Response({'Status':'Failed','Msg':str(e)})
 
 
