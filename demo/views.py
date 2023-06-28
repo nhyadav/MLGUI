@@ -137,7 +137,18 @@ def getDescriptionData(request):
         dp.getsummary()
         dp.get_stats_description()
         with open(rawdatapath, "wb") as fout:
-            pickle.dump(dp.data, fout)
+                pickle.dump(dp.data, fout)
+        params['DataPreprocessing']['Imputation'] = False
+        params['DataPreprocessing']['Transformation'] = False
+        params['FeatureEngineering']['FeatureSelection'] = False
+        params['FeatureEngineering']['FeatureScaling'] = False
+        params['FeatureEngineering']['FeatureTransformation'] = False
+        params['ModelEvalution']['Classification'] = False
+        params['ModelEvalution']['Regression'] = False
+        params['ModelEvalution']['Cluster'] = False
+        params['ModelEvalution']['TSA'] = False
+        # print("Ram")
+        save_config(params)
         response = [dp.data_,dp.datasummary_,dp.stats_description]
         return Response(response, status=200)
     
